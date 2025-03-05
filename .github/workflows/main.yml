@@ -1,77 +1,72 @@
-name: Build TWRP Recovery
+name: Build TWRP for OnePlus Nord CE 3 Lite 5G
 
 on:
-  workflow_dispatch:
   push:
     branches:
       - main
 
 jobs:
-  build:
+  build_twrp:
     runs-on: ubuntu-latest
-
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout the repository
+      uses: actions/checkout@v2
 
-      - name: Install essential dependencies
-        run: |
-          sudo apt update -qq
-          sudo apt install -y -q bc bison build-essential curl flex g++-multilib gcc-multilib git gnupg gperf \
-            imagemagick libncurses5-dev lib32z1-dev liblz4-tool libsdl1.2-dev libssl-dev \
-            libxml2 libxml2-utils lzop openjdk-11-jdk python3 python3-pip unzip xz-utils zip zlib1g-dev \
-            repo
+    - name: Setup Environment
+      run: |
+        sudo apt update
+        sudo apt install -y repo git curl bc bison flex g++-multilib jq libssl-dev libsdl1.2-dev libwxgtk3.0-dev libxml2 libxml2-utils lzop python3 python3-pip python3-venv rsync scons sudo zip zlib1g-dev
 
-      - name: Set up repo and sync sources
-        run: |
-          # Skip repo update and set up repo without checking for updates
-          mkdir -p ~/twrp && cd ~/twrp
-          REPO_UPDATE=0 repo init -u https://github.com/minimal-manifest-twrp/platform_manifest_twrp_aosp.git -b twrp-12.1
-          REPO_UPDATE=0 repo sync -j$(nproc) --force-sync
+    - name: Clone LineageOS Device Tree for OnePlus Nord CE 3 Lite 5G
+      run: |
+        git clone https://github.com/LineageOS/android_device_oneplus_larry.git device/oneplus/larry
 
-      - name: Clone device tree
-        run: |
-          mkdir -p ~/twrp/device/oneplus/larry
-          git clone https://github.com/LineageOS/android_device_oneplus_larry ~/twrp/device/oneplus/larry
+    - name: Modify Device Tree for TWRP
+      run: |
+        # Navigate to the device tree directory
+        cd device/oneplus/larry
 
-      - name: Set up build environment
-        run: |
-          cd ~/twrp
-          source build/envsetup.sh
-          export ALLOW_MISSING_DEPENDENCIES=true
-          lunch twrp_larry-eng
+        # Remove boot-specific files
+        rm -rf init.rc init.larry.rc
 
-      - name: Build TWRP
-        run: |
-          cd ~/twrp
-          mka bootimage vendor_bootimage dtboimage recoveryimage
+        # Create or modify recovery.fstab for TWRP
+        cat <<EOL > recovery.fstab
+/dev/block/bootdevice/by-name/system   /system      ext4    ro
+/dev/block/bootdevice/by-name/vendor   /vendor      ext4    ro
+/dev/block/bootdevice/by-name/cache    /cache       ext4    rw
+/dev/block/bootdevice/by-name/recovery /recovery    emmc    rw
+EOL
 
-      - name: Upload images as artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: twrp-images
-          path: |
-            ~/twrp/out/target/product/larry/boot.img
-            ~/twrp/out/target/product/larry/vendor_boot.img
-            ~/twrp/out/target/product/larry/dtbo.img
-            ~/twrp/out/target/product/larry/recovery.img
+        # Modify Android.mk or Boardconfig.mk for TWRP kernel configuration
+        # (This is just a sample, you'll need to modify it based on your kernel config)
+        echo "BOARD_KERNEL_CMDLINE := androidboot.selinux=permissive" >> Boardconfig.mk
+        
+    - name: Clone TWRP AOSP Manifest
+      run: |
+        git clone https://github.com/TeamWin/android_bootable_recovery -b twrp-12.1 platform/bootable/recovery
 
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            ~/twrp/out/target/product/larry/boot.img
-            ~/twrp/out/target/product/larry/vendor_boot.img
-            ~/twrp/out/target/product/larry/dtbo.img
-            ~/twrp/out/target/product/larry/recovery.img
-          tag_name: latest
-          name: TWRP Build for OnePlus Larry
-          body: |
-            Latest TWRP build for OnePlus Larry
-            
-            - Boot Image
-            - Vendor Boot Image
-            - DTBO Image
-            - Recovery Image
-          draft: false
-          prerelease: false
+    - name: Setup TWRP Build Environment
+      run: |
+        # Initialize the TWRP build environment
+        cd platform/bootable/recovery
+        repo init -u https://github.com/TeamWin/android_bootable_recovery -b twrp-12.1
+        repo sync
+
+    - name: Set up kernel for recovery
+      run: |
+        # Clone the kernel (use the correct kernel source repo for the OnePlus Nord CE 3 Lite 5G)
+        git clone https://github.com/LineageOS/android_kernel_oneplus_larry.git kernel/oneplus/larry
+
+    - name: Build TWRP
+      run: |
+        # Initialize the build environment and set up for the OnePlus device
+        . build/envsetup.sh
+        lunch twrp_larry-userdebug
+        mka recoveryimage
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: twrp-recovery-image
+        path: out/target/product/larry/recovery.img
