@@ -14,22 +14,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install essential dependencies
         run: |
           sudo apt update
-          sudo apt install -y bc bison build-essential ccache curl flex g++-multilib gcc-multilib git gnupg gperf \
+          sudo apt install -y bc bison build-essential curl flex g++-multilib gcc-multilib git gnupg gperf \
             imagemagick libncurses5-dev lib32z1-dev liblz4-tool libsdl1.2-dev libssl-dev \
             libxml2 libxml2-utils lzop openjdk-11-jdk python3 python3-pip unzip xz-utils zip zlib1g-dev \
             repo
 
-      - name: Create necessary directories for repo tool
-        run: |
-          mkdir -p ~/twrp/.repo/repo
-
       - name: Update repo tool to latest version
         run: |
-          curl https://storage.googleapis.com/git-repo-downloads/repo-2.50 > ~/twrp/.repo/repo/repo
-          chmod +x ~/twrp/.repo/repo/repo
+          # Download the latest repo tool directly
+          curl https://storage.googleapis.com/git-repo-downloads/repo-2.50 > /usr/local/bin/repo
+          chmod +x /usr/local/bin/repo
 
       - name: Set up repo and sync sources
         run: |
