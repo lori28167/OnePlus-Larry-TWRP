@@ -2,6 +2,6 @@
 TWRP build for OnePlus larry
 
 
-# Part 1
+# Updates
 Tried building with github actions without success.
 Trying GitHub Actions RDP
