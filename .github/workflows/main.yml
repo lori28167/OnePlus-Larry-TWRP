@@ -22,6 +22,11 @@ jobs:
             libxml2 libxml2-utils lzop openjdk-11-jdk python3 python3-pip unzip xz-utils zip zlib1g-dev \
             repo
 
+      - name: Update repo tool to latest version
+        run: |
+          curl https://storage.googleapis.com/git-repo-downloads/repo-2.50 > ~/twrp/.repo/repo/repo
+          chmod +x ~/twrp/.repo/repo/repo
+
       - name: Set up repo and sync sources
         run: |
           mkdir -p ~/twrp && cd ~/twrp
